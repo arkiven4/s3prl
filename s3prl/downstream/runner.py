@@ -88,7 +88,7 @@ class Runner():
     def __init__(self, args, config):
         self.args = args
         self.config = config
-        self.init_ckpt = torch.load(self.args.init_ckpt, map_location='cpu') if self.args.init_ckpt else {}
+        self.init_ckpt = torch.load(self.args.init_ckpt, map_location='cpu', weights_only=False) if self.args.init_ckpt else {}
 
         self.upstream = self._get_upstream()
         self.featurizer = self._get_featurizer()
@@ -141,6 +141,9 @@ class Runner():
             Upstream = getattr(hub, self.args.upstream)
             ckpt_path = self.args.upstream_ckpt
         upstream_refresh = self.args.upstream_refresh
+
+        print(f'[Runner] - Using CKPT : {ckpt_path}')
+        print(f'[Runner] - Using Config : {self.args.upstream_model_config}')
 
         if is_initialized() and get_rank() > 0:
             torch.distributed.barrier()
@@ -253,6 +256,7 @@ class Runner():
         # specaug
         specaug = None
         if self.config.get('specaug'):
+            print(f'[Runner] - Using SpecAugment')
             from .specaug import SpecAug
             specaug = SpecAug(**self.config["specaug"])
 

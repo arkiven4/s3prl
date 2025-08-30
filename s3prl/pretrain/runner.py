@@ -40,7 +40,8 @@ class Runner():
         self.config = config
         self.logger = SummaryWriter(args.expdir)                                                 
 
-        self.init_ckpt = torch.load(self.args.init_ckpt, map_location='cpu') if self.args.init_ckpt else {}
+        self.init_ckpt = torch.load(self.args.init_ckpt, map_location='cpu', weights_only=False) if self.args.init_ckpt else {}
+        self.finetune_ckpt = torch.load(self.args.finetune_ckpt, map_location='cpu', weights_only=False) if self.args.finetune_ckpt else {}
         self.upstream = self._get_upstream()
 
 
@@ -65,6 +66,10 @@ class Runner():
         if self.init_ckpt != {}:
             print('[Runner] - Loading upstream weights from the previous experiment')
             upstream.load_model(self.init_ckpt)
+        if self.finetune_ckpt != {}:
+            print('[Runner] - Loading upstream weights from the previous experiment For FineTune ' + self.args.finetune_ckpt)
+            
+            upstream.load_model(self.finetune_ckpt)
         if hasattr(upstream, 'loss_to_device'):
             print('[Runner] - Loss to device')
             upstream.loss_to_device()
@@ -128,7 +133,7 @@ class Runner():
         amp = self.config['runner'].get('fp16', False)
         if amp:
             print('[Runner] - Enabled fp16 training')
-            scaler = torch.cuda.amp.GradScaler()
+            scaler = torch.amp.GradScaler(device='cuda')
 
         # set optimizer
         model_params = [self.upstream.model]
@@ -171,7 +176,7 @@ class Runner():
                     if self.args.multi_gpu:
                         loss = loss.sum()
                     if amp:
-                        scaler.scale(loss).backward()
+                        scaler.scale(loss).backward() # type: ignore
                     else:
                         loss.backward()
 

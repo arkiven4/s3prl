@@ -1,0 +1,46 @@
+source /home/is/dwipraseetyo-a/.venv/bin/activate
+cd /home/is/dwipraseetyo-a/NAS_HAI/Project/s3prl/s3prl
+
+python preprocess/generate_len_for_bucket.py -i /home/is/dwipraseetyo-a/NAS_HAI/Datasets/
+PYTHONPATH=. python preprocess/preprocess_myown.py --feature_type mel --data_path /home/is/dwipraseetyo-a/NAS_HAI/Datasets/
+
+
+# Finetuning Training
+CUDA_VISIBLE_DEVICES=2 python run_pretrain.py -u tera -g pretrain/tera/config_model.yaml -c pretrain/tera/config_runner_v2.yaml -fi data/hg_pre  -n tera_1M
+ # --multi_gpu 
+
+# Resume Training
+CUDA_VISIBLE_DEVICES=2 python run_pretrain.py -u tera -g pretrain/tera/config_model.yaml -c pretrain/tera/config_runner_v2.yaml -n tera_try5e5 -a
+
+# Finetuning Steps 2 Training
+CUDA_VISIBLE_DEVICES=2 python run_pretrain.py -u tera -g pretrain/tera/config_model.yaml -c pretrain/tera/config_runner_v2.yaml -n tera_try1e5 -fi result/pretrain/tera_try5e5
+
+
+# Tensorboard 
+source /home/is/dwipraseetyo-a/.venv/bin/activate
+cd /home/is/dwipraseetyo-a/NAS_HAI/Project/s3prl/s3prl
+tensorboard --port 6036 --logdir result/pretrain/tera_try1e5
+
+
+
+
+
+
+https://huggingface.co/s3prl/tera/resolve/main/tera_logMelBase_T_F_M_AdamW_b32_1m_960hr_drop1/states-1000000.ckpt?download=true
+
+
+CUDA_VISIBLE_DEVICES=2 python run_downstream.py -m train -n CovidTry1 -u tera -d myown_souclass -i result/pretrain/tera_try5e5/states-390000.ckpt
+CUDA_VISIBLE_DEVICES=2 python run_downstream.py -m train -n CovidTry1 -u tera -d myown_souclass -e result/pretrain/tera_try5e5 
+
+CUDA_VISIBLE_DEVICES=2 python run_downstream.py -m train -n TrySoundClassi_5e4exp_augment -u tera -d myown_souclass --hub torch -k result/pretrain/tera_try5e4_dp01/states-390000.ckpt -g result/pretrain/tera_try5e4_dp01/config_model.yaml
+CUDA_VISIBLE_DEVICES=2 python run_downstream.py -m train -n TryTBCoda_5e4exp_augment -u tera -d myown_tbcoda --hub torch -k result/pretrain/tera_try5e4_dp01/states-390000.ckpt -g result/pretrain/tera_try5e4_dp01/config_model.yaml
+CUDA_VISIBLE_DEVICES=2 python run_downstream.py -m train -n TrySoundClassi_OriginalWeight -u tera -d myown_souclass
+
+CUDA_VISIBLE_DEVICES=2 python3 run_downstream.py \
+  --mode evaluate \
+  --init_ckpt /home/is/dwipraseetyo-a/NAS_HAI/Project/s3prl/s3prl/result/downstream/TryTBCoda_5e4exp_augment/best-states-dev.ckpt \
+  -d myown_souclass \
+  --config /home/is/dwipraseetyo-a/NAS_HAI/Project/s3prl/s3prl/result/downstream/TryTBCoda_5e4exp_augment/config_model_2025-07-28-13-11-29.yaml \
+  --upstream tera
+
+CUDA_VISIBLE_DEVICES=2 python3 run_downstream.py -m evaluate -t "dev" -e /home/is/dwipraseetyo-a/NAS_HAI/Project/s3prl/s3prl/result/downstream/TryTBCoda_5e4exp_augment/

@@ -47,7 +47,6 @@ class KaldiAcousticDataset(FeatDataset):
 
 
 class OnlineAcousticDataset(FeatDataset):
-    
     def __init__(self, extracter, task_config, bucket_size, file_path, sets, 
                  max_timestep=0, libri_root=None, target_level=-25, **kwargs):
         max_timestep *= 160
@@ -82,5 +81,10 @@ class OnlineAcousticDataset(FeatDataset):
     def __getitem__(self, index):
         # Load acoustic feature and pad
         x_batch = [self._sample(self._load_feat(x_file)) for x_file in self.X[index]]
-        x_pad_batch = pad_sequence(x_batch, batch_first=True)
+        try:
+            x_pad_batch = pad_sequence(x_batch, batch_first=True)
+        except:
+            print([self._sample(self._load_feat(x_file)).shape for x_file in self.X[index]])
+            print([x_file for x_file in self.X[index]])
+        
         return self._process_x_pad_batch(x_pad_batch)

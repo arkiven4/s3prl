@@ -212,11 +212,19 @@ def extract_feature(input_file, feature='fbank', delta=False, delta_delta=False,
 #####################
 # SAVE FIG TO NUMPY #
 #####################
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 def _save_figure_to_numpy(fig):
-    # save it to a numpy array.
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data.transpose(2, 0, 1) # (Channel, Height, Width)
+    # Attach canvas if not already attached
+    canvas = FigureCanvas(fig)
+    canvas.draw()
+
+    # Get image as RGBA, then strip alpha for RGB
+    width, height = canvas.get_width_height()
+    buf = np.frombuffer(canvas.buffer_rgba(), dtype=np.uint8)
+    data = buf.reshape((height, width, 4))[..., :3]  # remove alpha channel
+
+    return data.transpose(2, 0, 1)  # (Channels, Height, Width)
 
 
 #############################

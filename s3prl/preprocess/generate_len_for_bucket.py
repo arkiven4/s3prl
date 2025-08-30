@@ -42,7 +42,7 @@ def get_preprocess_args():
 # EXTRACT LENGTH #
 ##################
 def extract_length(input_file):
-    torchaudio.set_audio_backend("sox_io")
+    #torchaudio.set_audio_backend("sox_io")
     return torchaudio.info(input_file).num_frames
 
 
@@ -52,15 +52,16 @@ def extract_length(input_file):
 def generate_length(args, tr_set, audio_extension):
     
     for i, s in enumerate(tr_set):
-        if os.path.isdir(os.path.join(args.input_data, s.lower())):
-            s = s.lower()
-        elif os.path.isdir(os.path.join(args.input_data, s.upper())):
-            s = s.upper()
-        else:
-            assert NotImplementedError
+        # if os.path.isdir(os.path.join(args.input_data, s.lower())):
+        #     s = s.lower()
+        # elif os.path.isdir(os.path.join(args.input_data, s.upper())):
+        #     s = s.upper()
+        # else:
+        #     assert NotImplementedError
+        df = pd.read_csv(args.input_data + "/metadata_ssl.csv." + s)
 
         print('')
-        todo = list(Path(os.path.join(args.input_data, s)).rglob('*' + audio_extension)) # '*.flac'
+        todo = list(df['path_file'].values) #list(Path(os.path.join(args.input_data, s)).rglob('*' + audio_extension)) # '*.flac'
         print(f'Preprocessing data in: {s}, {len(todo)} audio files found.')
 
         output_dir = os.path.join(args.output_path, args.name)
@@ -93,9 +94,9 @@ def main():
     elif 'timit' in args.input_data.lower():
         SETS = ['TRAIN', 'TEST']
     else:
-        raise NotImplementedError
+        pass #raise NotImplementedError
     # change the SETS list to match your dataset, for example:
-    # SETS = ['train', 'dev', 'test']
+    SETS = ['train', 'test']
     # SETS = ['TRAIN', 'TEST']
     # SETS = ['train-clean-100', 'train-clean-360', 'train-other-500', 'dev-clean', 'dev-other', 'test-clean', 'test-other']
     

@@ -26,7 +26,6 @@ import numpy as np
 from pretrain.runner import Runner
 from utility.helper import override
 
-
 ######################
 # PRETRAIN ARGUMENTS #
 ######################
@@ -36,6 +35,7 @@ def get_pretrain_args():
     # use a ckpt as the experiment initialization
     # if set, all the following args and config will be overwrited by the ckpt, except args.mode
     parser.add_argument('-e', '--past_exp', metavar='{CKPT_PATH,CKPT_DIR}', help='Resume training from a checkpoint')
+    parser.add_argument('-fi', '--f_past_exp', metavar='{CKPT_PATH,CKPT_DIR}', help='Fine Tuning Upstream')
     parser.add_argument('-o', '--override', help='Used to override args and config, this is at the highest priority')
 
     # configuration for the experiment, including runner and downstream
@@ -80,7 +80,8 @@ def get_pretrain_args():
         print(f'[Runner] - Resume from {ckpt_pth}')
 
         # load checkpoint
-        ckpt = torch.load(ckpt_pth, map_location='cpu')
+        ckpt = torch.load(ckpt_pth, map_location='cpu', weights_only=False)
+        print(ckpt.keys())
 
         def update_args(old, new):
             old_dict = vars(old)
@@ -93,10 +94,21 @@ def get_pretrain_args():
         os.makedirs(args.expdir, exist_ok=True)
         args.init_ckpt = ckpt_pth
         config = ckpt['Config']
-
     else:
         print('[Runner] - Start a new experiment')
         args.init_ckpt = None
+        if args.f_past_exp:
+            # determine checkpoint path
+            if os.path.isdir(args.f_past_exp):
+                ckpt_pths = glob.glob(f'{args.f_past_exp}/states-*.ckpt')
+                assert len(ckpt_pths) > 0
+                ckpt_pths = sorted(ckpt_pths, key=lambda pth: int(pth.split('-')[-1].split('.')[0]))
+                args.finetune_ckpt = ckpt_pths[-1]
+            else:
+                args.finetune_ckpt = args.f_past_exp
+
+        else:
+            args.finetune_ckpt = False
 
         assert args.expname is not None
         if args.expdir is None:
